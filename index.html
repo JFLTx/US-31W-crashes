@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>US 31W Crashes - Pre- and Post Construction</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+      integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+
+    <!-- libre franklin font styles -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div id="container">
+      <div id="side-panel">
+        <h2>US 31 W Crashes</h2>
+        <h3>Before (2019) and After (2023) Construction</h3>
+        <h3>MP 17.677 to MP 21.017</h3>
+        <p>
+          This web map was developed to show the reduction in both crash totals
+          and injury crashes after consctrution was completed along US 31W in
+          Elizabethtown, KY.
+        </p>
+
+        <p class="sideText_p_end">
+          Crash data was extracted from
+          <a target="_blank" href="http://crashinformationky.org/"
+            >Kentucky State Police Website</a
+          >. Map designed courtesy of <a target="_blank" href="https://www.palmernet.com/">Palmer Engineering</a>.
+        </p>
+
+        <!-- dropdown control element for the graph and crashes  -->
+        <p>
+          Please use the drop-down menu to view crashes before or after
+          construction.
+        </p>
+       
+        <div id="ui-controls">
+          <select id="selectionControl">
+            <option value="all" selected>Before/After Construction</option>
+            <option disabled>────────────────</option>
+            <option value="Before">Before</option>
+            <option value="After">After</option>
+          </select>
+        </div>
+
+        <div id="stats"></div>
+
+      </div>
+
+      <!-- map div -->
+      <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+      integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
+      crossorigin=""
+    ></script>
+    <!-- D3 library  -->
+    <script src="https://d3js.org/d3.v7.js"></script>
+
+    <!-- Load external JavaScript app from the JS folder -->
+    <script src="js/app.js"></script>
+  </body>
+</html>

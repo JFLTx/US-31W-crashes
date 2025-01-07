@@ -221,7 +221,7 @@ d3.csv("data/crashes.csv").then((data) => {
     chartContainer.selectAll("*").remove();
 
     const width = document.querySelector("#side-panel").clientWidth * 0.9; // 90% of the side panel width
-    const labelHeight = 45; // Approximate height for rotated labels
+    const labelHeight = 60; // Approximate height for rotated labels
     const baseHeight = 350; // Base chart height
     const dynamicHeight = baseHeight + labelHeight; // Add height for labels dynamically
 

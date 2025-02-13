@@ -170,48 +170,79 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
   };
 
   // Update the map markers. Both activeFilter and activeSectionFilter are applied.
+  // Helper function to check if a marker should be active
+  const markerMatchesFilters = (layer) => {
+    return (
+      // Check the before/after filter:
+      (activeFilter === "all" ||
+        layer.crashData["Before/After Construction"] === activeFilter) &&
+      // Check the section filter:
+      (activeSectionFilter === "all" ||
+        layer.crashData.Section === activeSectionFilter)
+    );
+  };
+
+  // Update the map markers. Both activeFilter and activeSectionFilter are applied.
   const updateMap = () => {
+    // Process markers in the afterLayer.
     afterLayer.eachLayer((layer) => {
-      const meetsBeforeAfter =
-        activeFilter === "all" || activeFilter === "After";
-      const meetsSection =
-        activeSectionFilter === "all" ||
-        layer.crashData.Section === activeSectionFilter;
-      const opacity = meetsBeforeAfter && meetsSection ? 0.8 : 0.1;
-      layer.setStyle({ fillOpacity: opacity });
+      if (markerMatchesFilters(layer)) {
+        // Marker matches the filters: show it and enable hover/tooltip.
+        layer.setStyle({ fillOpacity: 0.8 });
+        layer.options.interactive = true;
+        // Remove any previous hover events and then add them back.
+        layer.off("mouseover mouseout");
+        hover(layer);
+        // Bind tooltip if not already bound.
+        if (!layer.getTooltip()) {
+          layer.bindTooltip(
+            layer.feature?.tooltipContent || "No additional info"
+          );
+        }
+      } else {
+        // Marker does not match: hide it and disable interaction.
+        layer.setStyle({ fillOpacity: 0.0 });
+        layer.options.interactive = false;
+        layer.off("mouseover mouseout");
+        if (layer.getTooltip()) {
+          layer.unbindTooltip();
+        }
+      }
     });
 
+    // Process markers in the beforeLayer.
     beforeLayer.eachLayer((layer) => {
-      const meetsBeforeAfter =
-        activeFilter === "all" || activeFilter === "Before";
-      const meetsSection =
-        activeSectionFilter === "all" ||
-        layer.crashData.Section === activeSectionFilter;
-      const opacity = meetsBeforeAfter && meetsSection ? 0.8 : 0.1;
-      layer.setStyle({ fillOpacity: opacity });
+      if (markerMatchesFilters(layer)) {
+        layer.setStyle({ fillOpacity: 0.8 });
+        layer.options.interactive = true;
+        layer.off("mouseover mouseout");
+        hover(layer);
+        if (!layer.getTooltip()) {
+          layer.bindTooltip(
+            layer.feature?.tooltipContent || "No additional info"
+          );
+        }
+      } else {
+        layer.setStyle({ fillOpacity: 0.0 });
+        layer.options.interactive = false;
+        layer.off("mouseover mouseout");
+        if (layer.getTooltip()) {
+          layer.unbindTooltip();
+        }
+      }
     });
 
-    // Ensure both layers are added to the map
+    // Ensure both layers are added to the map.
     if (!map.hasLayer(afterLayer)) map.addLayer(afterLayer);
     if (!map.hasLayer(beforeLayer)) map.addLayer(beforeLayer);
 
-    // Create a feature group from markers that match both filters for zooming
+    // Zoom to markers that match the filters.
     const matchingMarkers = [];
     afterLayer.eachLayer((layer) => {
-      const meetsBeforeAfter =
-        activeFilter === "all" || activeFilter === "After";
-      const meetsSection =
-        activeSectionFilter === "all" ||
-        layer.crashData.Section === activeSectionFilter;
-      if (meetsBeforeAfter && meetsSection) matchingMarkers.push(layer);
+      if (markerMatchesFilters(layer)) matchingMarkers.push(layer);
     });
     beforeLayer.eachLayer((layer) => {
-      const meetsBeforeAfter =
-        activeFilter === "all" || activeFilter === "Before";
-      const meetsSection =
-        activeSectionFilter === "all" ||
-        layer.crashData.Section === activeSectionFilter;
-      if (meetsBeforeAfter && meetsSection) matchingMarkers.push(layer);
+      if (markerMatchesFilters(layer)) matchingMarkers.push(layer);
     });
     if (matchingMarkers.length > 0) {
       const group = L.featureGroup(matchingMarkers);
@@ -221,6 +252,22 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       }
     }
   };
+
+  // Event listener for the before/after dropdown changes.
+  d3.select("#selectionControl").on("change", function () {
+    activeFilter = this.value;
+    updateMap();
+    updateCharts();
+    calcStats();
+  });
+
+  // Event listener for the section dropdown changes.
+  d3.select("#sectionControl").on("change", function () {
+    activeSectionFilter = this.value;
+    updateMap();
+    updateCharts();
+    calcStats();
+  });
 
   // Update the bar chart. This uses the section filter to recalc numbers.
   const updateCharts = () => {
@@ -353,44 +400,43 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
   d3.select("#selectionControl").on("change", function () {
     activeFilter = this.value;
 
-    if (activeFilter === "Before") {
-      toggleInteraction(beforeLayer, afterLayer);
-    } else if (activeFilter === "After") {
-      toggleInteraction(afterLayer, beforeLayer);
-    } else {
-      // Enable hover for all layers if "all" is selected
-      beforeLayer.eachLayer((layer) => {
-        layer.setStyle({ interactive: true });
-        layer.on("mouseover", function () {
-          this.setStyle({ radius: 8, fillOpacity: 1 });
-        });
-        layer.on("mouseout", function () {
-          this.setStyle({ radius: 6, fillOpacity: 0.75 });
-        });
-        if (!layer.getTooltip()) {
-          layer.bindTooltip(
-            layer.feature?.tooltipContent || "No additional info"
-          );
+    [beforeLayer, afterLayer].forEach((layerGroup) => {
+      layerGroup.eachLayer((layer) => {
+        if (
+          activeFilter === "all" ||
+          layer.crashData["Before/After Construction"] === activeFilter
+        ) {
+          // Enable interaction for active markers.
+          layer.options.interactive = true;
+          // (Clear any previous events and add hover events.)
+          layer.off("mouseover mouseout");
+          layer.on("mouseover", function () {
+            this.setStyle({ radius: 8, fillOpacity: 1 });
+          });
+          layer.on("mouseout", function () {
+            this.setStyle({ radius: 6, fillOpacity: 0.8 });
+          });
+          // Bind the tooltip if not already bound.
+          if (!layer.getTooltip()) {
+            layer.bindTooltip(
+              layer.feature?.tooltipContent || "No additional info"
+            );
+          }
+        } else {
+          // Disable interaction for markers that do not match.
+          layer.options.interactive = false;
+          layer.off("mouseover mouseout");
+          // Unbind any tooltip that might be attached.
+          if (layer.getTooltip()) {
+            layer.unbindTooltip();
+          }
         }
       });
-      afterLayer.eachLayer((layer) => {
-        layer.setStyle({ interactive: true });
-        layer.on("mouseover", function () {
-          this.setStyle({ radius: 8, fillOpacity: 1 });
-        });
-        layer.on("mouseout", function () {
-          this.setStyle({ radius: 6, fillOpacity: 0.75 });
-        });
-        if (!layer.getTooltip()) {
-          layer.bindTooltip(
-            layer.feature?.tooltipContent || "No additional info"
-          );
-        }
-      });
-    }
-    updateMap();
-    updateCharts();
-    calcStats();
+
+      updateMap();
+      updateCharts();
+      calcStats();
+    });
   });
 
   // Event listener for the section dropdown changes

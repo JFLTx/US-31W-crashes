@@ -32,13 +32,12 @@ map.addControl(
   })
 );
 
-// Global variable for the Section filter (default "all")
+// Global variables for filtering. Both start as "all".
+let activeFilter = "all"; // For Before/After Construction
 let activeSectionFilter = "all";
 
 // Load crash data
 d3.csv("data/final-crash-dataset.csv").then((data) => {
-  let activeFilter = "all"; // 'all', 'Before', 'After'
-
   // Create arrays for before/after crashes based on construction status.
   const afterCrashes = data.filter(
     (d) => d["Before/After Construction"] === "After"
@@ -50,6 +49,7 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
   const afterLayer = L.layerGroup();
   const beforeLayer = L.layerGroup();
 
+  // Helper: add hover events to a marker.
   const hover = (marker) => {
     marker.on("mouseover", function () {
       this.setStyle({
@@ -65,7 +65,7 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
     });
   };
 
-  // Create markers and attach the full crash record (including Section)
+  // Create markers and attach full crash record (including Section).
   const addCrashesToLayer = (crashes, layer, color) => {
     layer.clearLayers();
     crashes.forEach((crash) => {
@@ -79,17 +79,17 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       // Save the full crash record (for later filtering by Section)
       marker.crashData = crash;
 
-      // Add tooltip content
+      // Create tooltip content.
       marker.feature = {
         tooltipContent: `
-            <u>Collision Time</u>: ${crash.CollisionTime}<br>
-            <u>Weather Condition</u>: ${crash.Weather}<br>
-            <u>Roadway Condition</u>: ${crash.RdwyConditionCode}<br>
-            <u>Lighting</u>: ${crash.LightCondition}<br>
-            <u>Crash Description</u>: ${crash.DirAnalysisCode}`,
+          <u>Collision Time</u>: ${crash.CollisionTime}<br>
+          <u>Weather Condition</u>: ${crash.Weather}<br>
+          <u>Roadway Condition</u>: ${crash.RdwyConditionCode}<br>
+          <u>Lighting</u>: ${crash.LightCondition}<br>
+          <u>Crash Description</u>: ${crash.DirAnalysisCode}`,
       };
 
-      // Bind hover and tooltip
+      // Bind hover events and tooltip.
       hover(marker);
       marker.bindTooltip(marker.feature.tooltipContent);
 
@@ -97,34 +97,7 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
     });
   };
 
-  const toggleInteraction = (activeLayer, inactiveLayer) => {
-    // Enable hover and tooltips on the active layer
-    activeLayer.eachLayer((layer) => {
-      layer.setStyle({ interactive: true }); // Enable interaction
-      layer.on("mouseover", function () {
-        this.setStyle({ radius: 8, fillOpacity: 1 });
-      });
-      layer.on("mouseout", function () {
-        this.setStyle({ radius: 6, fillOpacity: 0.8 });
-      });
-      if (!layer.getTooltip()) {
-        layer.bindTooltip(
-          layer.feature?.tooltipContent || "No additional info"
-        );
-      }
-    });
-
-    // Disable hover and tooltips on the inactive layer
-    inactiveLayer.eachLayer((layer) => {
-      layer.setStyle({ interactive: false }); // Disable interaction
-      layer.off("mouseover mouseout"); // Disable hover
-      if (layer.getTooltip()) {
-        layer.unbindTooltip(); // Ensure tooltip is removed
-      }
-    });
-  };
-
-  // Recalculate crash stats (for the #stats div) based on current filters.
+  // Recalculate crash stats for the #stats div based on current filters.
   const calcStats = () => {
     // Filter by Section first.
     const filteredBefore = beforeCrashes.filter(
@@ -158,49 +131,65 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
     const statsContainer = d3.select("#stats");
     statsContainer.selectAll("*").remove(); // Clear previous content
 
+    // Create two headings with a span that holds the animated number.
     statsContainer
       .append("h3")
       .style("text-align", "center")
-      .text(`Crash Reduction: ${crashReduction.toFixed(1)}%`);
+      .html("Crash Reduction: <span class='crashReduction'>0.0</span>%");
 
     statsContainer
       .append("h3")
       .style("text-align", "center")
-      .text(`Injury Reduction: ${injuryReduction.toFixed(1)}%`);
+      .html("Injury Reduction: <span class='injuryReduction'>0.0</span>%");
+
+    // Animate the Crash Reduction number from 0 to crashReduction
+    d3.select(".crashReduction")
+      .transition()
+      .duration(300)
+      .tween("text", function () {
+        let i = d3.interpolateNumber(0, crashReduction);
+        return function (t) {
+          d3.select(this).text(i(t).toFixed(1));
+        };
+      });
+
+    // Animate the Injury Reduction number from 0 to injuryReduction
+    d3.select(".injuryReduction")
+      .transition()
+      .duration(300)
+      .tween("text", function () {
+        let i = d3.interpolateNumber(0, injuryReduction);
+        return function (t) {
+          d3.select(this).text(i(t).toFixed(1));
+        };
+      });
   };
 
-  // Update the map markers. Both activeFilter and activeSectionFilter are applied.
-  // Helper function to check if a marker should be active
+  // Check if a marker should be shown based on the active filters.
   const markerMatchesFilters = (layer) => {
     return (
-      // Check the before/after filter:
       (activeFilter === "all" ||
         layer.crashData["Before/After Construction"] === activeFilter) &&
-      // Check the section filter:
       (activeSectionFilter === "all" ||
         layer.crashData.Section === activeSectionFilter)
     );
   };
 
-  // Update the map markers. Both activeFilter and activeSectionFilter are applied.
+  // Update the map markers.
   const updateMap = () => {
-    // Process markers in the afterLayer.
+    // Process afterLayer markers.
     afterLayer.eachLayer((layer) => {
       if (markerMatchesFilters(layer)) {
-        // Marker matches the filters: show it and enable hover/tooltip.
         layer.setStyle({ fillOpacity: 0.8 });
         layer.options.interactive = true;
-        // Remove any previous hover events and then add them back.
         layer.off("mouseover mouseout");
         hover(layer);
-        // Bind tooltip if not already bound.
         if (!layer.getTooltip()) {
           layer.bindTooltip(
             layer.feature?.tooltipContent || "No additional info"
           );
         }
       } else {
-        // Marker does not match: hide it and disable interaction.
         layer.setStyle({ fillOpacity: 0.0 });
         layer.options.interactive = false;
         layer.off("mouseover mouseout");
@@ -210,7 +199,7 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       }
     });
 
-    // Process markers in the beforeLayer.
+    // Process beforeLayer markers.
     beforeLayer.eachLayer((layer) => {
       if (markerMatchesFilters(layer)) {
         layer.setStyle({ fillOpacity: 0.8 });
@@ -232,11 +221,11 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       }
     });
 
-    // Ensure both layers are added to the map.
+    // Make sure both layers are added.
     if (!map.hasLayer(afterLayer)) map.addLayer(afterLayer);
     if (!map.hasLayer(beforeLayer)) map.addLayer(beforeLayer);
 
-    // Zoom to markers that match the filters.
+    // Zoom to markers matching the filters.
     const matchingMarkers = [];
     afterLayer.eachLayer((layer) => {
       if (markerMatchesFilters(layer)) matchingMarkers.push(layer);
@@ -253,25 +242,39 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
     }
   };
 
-  // Event listener for the before/after dropdown changes.
-  d3.select("#selectionControl").on("change", function () {
-    activeFilter = this.value;
+  // --- New: Event listener for period buttons ---
+  d3.selectAll(".period-button").on("click", function () {
+    const selectedFilter = d3.select(this).attr("data-filter");
+    const selectedSection = d3.select(this).attr("data-section");
+
+    activeFilter = selectedFilter;
+    activeSectionFilter = selectedSection;
+
+    // Optionally, update the visual active state.
+    d3.selectAll(".period-button").classed("active", false);
+    d3.select(this).classed("active", true);
+
     updateMap();
     updateCharts();
     calcStats();
   });
+  // --------------------------------------------------
 
-  // Event listener for the section dropdown changes.
-  d3.select("#sectionControl").on("change", function () {
-    activeSectionFilter = this.value;
+  d3.select("#reset-filters").on("click", function () {
+    activeFilter = "all";
+    activeSectionFilter = "all";
+
+    // Remove active styling from period buttons.
+    d3.selectAll(".period-button").classed("active", false);
+
     updateMap();
     updateCharts();
     calcStats();
   });
+  // --------------------------------------------------
 
-  // Update the bar chart. This uses the section filter to recalc numbers.
+  // Update the bar chart.
   const updateCharts = () => {
-    // Filter original data by section.
     const filteredBefore = beforeCrashes.filter(
       (d) => activeSectionFilter === "all" || d.Section === activeSectionFilter
     );
@@ -309,11 +312,10 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
     const chartContainer = d3.select("#chart-container");
     chartContainer.selectAll("*").remove();
 
-    const width = document.querySelector("#side-panel").clientWidth * 0.9; // 90% of side-panel width
-    const labelHeight = 60; // Height for rotated labels
-    const baseHeight = 350; // Base chart height
-    const dynamicHeight = baseHeight + labelHeight; // Total height with labels
-
+    const width = document.querySelector("#side-panel").clientWidth * 0.9;
+    const labelHeight = 60;
+    const baseHeight = 300;
+    const dynamicHeight = baseHeight + labelHeight;
     const margin = { top: 50, right: 20, bottom: 60 + labelHeight, left: 50 };
 
     const svg = chartContainer
@@ -332,7 +334,6 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       .domain([0, d3.max(chartData, (d) => d.value)])
       .range([dynamicHeight - margin.bottom, margin.top]);
 
-    // Draw bars with animation
     svg
       .selectAll(".bar")
       .data(chartData)
@@ -353,7 +354,6 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       .attr("y", (d) => yScale(d.value))
       .attr("height", (d) => dynamicHeight - margin.bottom - yScale(d.value));
 
-    // Add labels above bars
     svg
       .selectAll(".bar-label")
       .data(chartData)
@@ -371,7 +371,6 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       .ease(d3.easeCubicOut)
       .attr("y", (d) => yScale(d.value) - 5);
 
-    // Add x-axis
     svg
       .append("g")
       .attr("transform", `translate(0, ${dynamicHeight - margin.bottom})`)
@@ -380,73 +379,18 @@ d3.csv("data/final-crash-dataset.csv").then((data) => {
       .attr("transform", "rotate(-30)")
       .style("text-anchor", "end");
 
-    // Add y-axis
     svg
       .append("g")
       .attr("transform", `translate(${margin.left}, 0)`)
       .call(d3.axisLeft(yScale));
   };
 
-  // Add markers to their respective layers
+  // Add markers to their respective layers.
   addCrashesToLayer(beforeCrashes, beforeLayer, "#F40000");
   addCrashesToLayer(afterCrashes, afterLayer, "#2D72FF");
 
-  // Initial rendering of map, charts, and stats
+  // Initial rendering of map, charts, and stats.
   updateMap();
-  updateCharts();
   calcStats();
-
-  // Event listener for the before/after dropdown changes
-  d3.select("#selectionControl").on("change", function () {
-    activeFilter = this.value;
-
-    [beforeLayer, afterLayer].forEach((layerGroup) => {
-      layerGroup.eachLayer((layer) => {
-        if (
-          activeFilter === "all" ||
-          layer.crashData["Before/After Construction"] === activeFilter
-        ) {
-          // Enable interaction for active markers.
-          layer.options.interactive = true;
-          // (Clear any previous events and add hover events.)
-          layer.off("mouseover mouseout");
-          layer.on("mouseover", function () {
-            this.setStyle({ radius: 8, fillOpacity: 1 });
-          });
-          layer.on("mouseout", function () {
-            this.setStyle({ radius: 6, fillOpacity: 0.8 });
-          });
-          // Bind the tooltip if not already bound.
-          if (!layer.getTooltip()) {
-            layer.bindTooltip(
-              layer.feature?.tooltipContent || "No additional info"
-            );
-          }
-        } else {
-          // Disable interaction for markers that do not match.
-          layer.options.interactive = false;
-          layer.off("mouseover mouseout");
-          // Unbind any tooltip that might be attached.
-          if (layer.getTooltip()) {
-            layer.unbindTooltip();
-          }
-        }
-      });
-
-      updateMap();
-      updateCharts();
-      calcStats();
-    });
-  });
-
-  // Event listener for the section dropdown changes
-  d3.select("#sectionControl").on("change", function () {
-    activeSectionFilter = this.value;
-    updateMap();
-    updateCharts();
-    calcStats();
-  });
+  setTimeout(updateCharts, 250);
 });
-
-// Additional helper function for adding divs dynamically
-d3.select("#ui-controls").append("div").attr("id", "chart-container");

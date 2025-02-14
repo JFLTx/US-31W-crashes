@@ -20,7 +20,7 @@ body {
   background-color: #f4efdf;
   z-index: 600;
   overflow-y: auto;
-  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.3);
   border-right: 2px solid #ddd8c7;
   display: flex;
   flex-direction: column;
@@ -127,7 +127,7 @@ a:hover {
   font-style: inherit;
   margin-top: 20px auto;
   width: 90%;
-  height: 100%;
+  height: auto;
 }
 
 #chart-container svg {
@@ -137,11 +137,12 @@ a:hover {
 }
 
 #stats h3 {
-  margin-top: 10px;
-  font-size: 16px;
+  margin-top: 5px;
+  font-size: 14px;
   font-weight: bold;
+  text-align: center;
   color: #444;
-  margin-bottom: 25px;
+  margin-bottom: 5px;
 }
 
 #monitoring-periods {
@@ -183,6 +184,68 @@ a:hover {
   font-weight: bold;
   display: block;
   margin-bottom: 3px;
+}
+
+/* Remove any default button styles and make the entire block clickable */
+.period-button {
+  flex: 0 0 48%;
+  display: block;
+  width: 100%;
+  background-color: rgba(251, 249, 245, 0.9);
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+  padding: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  /* transition: background-color 0.3s, transform 0.2s; */
+}
+
+/* Style for the label inside the button */
+.period-button .label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 3px;
+}
+
+/* Hover effect for the button */
+.period-button:hover {
+  background-color: rgba(251, 249, 245, 1);
+  transform: scale(1.02);
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* Optional: indicate the active (clicked) state */
+.period-button.active {
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+}
+
+/* Adjust the container for period details to layout buttons side-by-side */
+.period-details {
+  display: flex;
+  justify-content: space-between;
+  gap: 4%;
+}
+
+/* New: Reset button styling */
+#reset-container {
+  text-align: center;
+  margin: 10px 0;
+}
+
+#reset-filters {
+  padding: 5px 5px;
+  font-size: 14px;
+  background-color: #eee;
+  border: 1px solid #a7a7a7;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#reset-filters:hover {
+  background-color: #fc8d8db6;
+  box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Mobile-friendly layout */
